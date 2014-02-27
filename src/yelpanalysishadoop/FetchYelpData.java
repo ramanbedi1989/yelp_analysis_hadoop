@@ -4,14 +4,11 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.joda.time.DateTime;
 import org.joda.time.Days;
 import org.jsoup.Jsoup;
@@ -62,7 +59,12 @@ public class FetchYelpData {
     public static int MEAN_180 = 38;
     public static int MEAN_210 = 39;
     public static int MEAN_210_PLUS = 40;
-    
+    public static int MUSIC = 41;
+    public static int GOOD_FOR_DANCING = 42;
+    public static int HAPPY_HOUR = 43;
+    public static int BEST_NIGHTS = 44;
+    public static int COAT_CHECK = 45;
+    public static int SMOKING = 46;
     public static int REVIEW_DATE_PUBLISHED = 0;
     public static int REVIEW_USER_NAME = 1;
     public static int REVIEW_CITY = 2;
@@ -71,74 +73,122 @@ public class FetchYelpData {
 
     public HashMap<Object[], ArrayList<String[]>> yelpdatafetch(String url) throws IOException {
         Document document = null;
-        Element element = null;
-        int test = 1;
-        String desc_url = url + "?sort_by=date_desc";
-        while (element == null) {
+        Elements top_shelf_elements = null;
+        Elements container_elements = null;
+        int index = 1;
+        String desc_url = url;
+        while (top_shelf_elements == null) {
             document = Jsoup.connect(desc_url).timeout(0).get();
-            element = document.getElementById("bizBox");
-            if (test == 5) {
+            top_shelf_elements = document.getElementsByClass("top-shelf");
+            if (index == 10) {
                 break;
             }
-            test++;
+            index++;
         }
-        //ArrayList<Object> data = new ArrayList();
-        Object []data = new Object[100];
-        data[MERCHANT_NAME] = element.select("#bizInfoHeader>h1[itemprop=name]").text();
-        data[MERCHANT_ADDRESS] = element.select("#bizInfoContent>address>span[itemprop=streetAddress]").text();
-        data[MERCHANT_CITY] = element.select("#bizInfoContent>address>span[itemprop=addressLocality]").text();
-        data[MERCHANT_STATE] = element.select("#bizInfoContent>address>span[itemprop=addressRegion]").text();
-        data[MERCHANT_ZIPCODE] = element.select("#bizInfoContent>address>span[itemprop=postalCode]").text();
-        data[MERCHANT_PHONE_NO] = element.select("#bizInfoContent>span[itemprop=telephone]").text();
-        data[MERCHANT_WEBSITE] = element.select("#bizUrl").text();
-        data[AVERAGE_RATING] = Float.parseFloat(element.select("#bizRating .rating>meta").attr("content"));
-        data[REVIEW_COUNT] = Integer.parseInt(element.select("#bizRating .review-count>span").text());
+        Object[] data = new Object[100];
+        data[MERCHANT_NAME] = top_shelf_elements.select(".biz-page-header-left>h1[itemprop=name]").text();
+        data[MERCHANT_ADDRESS] = top_shelf_elements.select(".mapbox>.mapbox-text>ul>.address>.street-address>address>span[itemprop=streetAddress]").text();
+        data[MERCHANT_CITY] = top_shelf_elements.select(".mapbox>.mapbox-text>ul>.address>.street-address>address>span[itemprop=addressLocality]").text();
+        data[MERCHANT_STATE] = top_shelf_elements.select(".mapbox>.mapbox-text>ul>.address>.street-address>address>span[itemprop=addressRegion]").text();
+        data[MERCHANT_ZIPCODE] = top_shelf_elements.select(".mapbox>.mapbox-text>ul>.address>.street-address>address>span[itemprop=postalCode]").text();
+        data[MERCHANT_PHONE_NO] = top_shelf_elements.select(".mapbox>.mapbox-text>ul>li>span>span[itemprop=telephone]").text();
+        data[MERCHANT_WEBSITE] = top_shelf_elements.select(".mapbox>.mapbox-text>ul>li>span>.biz-website>a").text();
+        data[AVERAGE_RATING] = Float.parseFloat(top_shelf_elements.select(".biz-page-header-left>.biz-main-info>.rating-info>.biz-rating>.rating-very-large>meta").attr("content"));
+        data[REVIEW_COUNT] = Integer.parseInt(top_shelf_elements.select(".biz-page-header-left>.biz-main-info>.rating-info>.biz-rating>.review-count>span[itemprop=reviewCount]").text());
 
-
-        data[HOURS] = element.select("#bizAdditionalInfo>.col-0>dl>dd.attr-BusinessHours").text();
-        data[GOOD_FOR_GROUPS] = (element.select("#bizAdditionalInfo>.col-0>dl>dd.attr-RestaurantsGoodForGroups").text().toLowerCase()).equals("yes");
-        data[ACCEPT_CREDIT_CARDS] = (element.select("#bizAdditionalInfo>.col-0>dl>dd.attr-BusinessAcceptsCreditCards").text().toLowerCase()).equals("yes");
-        data[PARKING] = element.select("#bizAdditionalInfo>.col-0>dl>dd.attr-BusinessParking").text();
-        data[ATTIRE] = element.select("#bizAdditionalInfo>.col-0>dl>dd.attr-RestaurantsAttire").text();
-
-        data[PRICE_RANGE] = element.select("#price_tip").text();
-        data[GOOD_FOR_KIDS] = (element.select("#bizAdditionalInfo>.col-1>dl>dd.attr-GoodForKids").text().toLowerCase()).equals("yes");
-        data[TAKE_RESERVATION] = (element.select("#bizAdditionalInfo>.col-1>dl>dd.attr-RestaurantsReservations").text().toLowerCase()).equals("yes");
-        data[DELIVERY] = (element.select("#bizAdditionalInfo>.col-1>dl>dd.attr-RestaurantsDelivery").text().toLowerCase()).equals("yes");
-        data[TAKE_OUT] = (element.select("#bizAdditionalInfo>.col-1>dl>dd.attr-RestaurantsTakeOut").text().toLowerCase()).equals("yes");
-        data[WAITER_SERVICES] = (element.select("#bizAdditionalInfo>.col-1>dl>dd.attr-RestaurantsTableService").text().toLowerCase()).equals("yes");
-        data[OUTDOOR_SEATS] = (element.select("#bizAdditionalInfo>.col-1>dl>dd.attr-OutdoorSeating").text().toLowerCase()).equals("yes");
-        data[WIFI] = (element.select("#bizAdditionalInfo>.col-1>dl>dd.attr-WiFi").text().toLowerCase()).equals("yes");
-        data[GOOD_FOR] = element.select("#bizAdditionalInfo>.col-2>dl>dd.attr-GoodForMeal").text();
-        data[ALCOHOL] = element.select("#bizAdditionalInfo>.col-2>dl>dd.attr-Alcohol").text();
-        data[NOISE_LEVEL] = element.select("#bizAdditionalInfo>.col-2>dl>dd.attr-NoiseLevel").text();
-        data[AMBIENCE] = element.select("#bizAdditionalInfo>.col-2>dl>dd.attr-Ambience").text();
-        data[HAS_TV] = (element.select("#bizAdditionalInfo>.col-2>dl>dd.attr-HasTV").text().toLowerCase()).equals("yes");
-        data[CATERS] = (element.select("#bizAdditionalInfo>.col-2>dl>dd.attr-Caters").text().toLowerCase()).equals("yes");
-        data[WHEELCHAIR_ACCESSIBLE] = (element.select("#bizAdditionalInfo>.col-2>dl>dd.attr-WheelchairAccessible").text().toLowerCase()).equals("yes");
-
-
-        Element ele = null;
-
-        String element_text;
-        ele = document.getElementById("rpp-count");
-
-        element_text = ele.text();
-        Pattern pattern = Pattern.compile("\\d+");
-        Matcher matcher = pattern.matcher(element_text);
-
-        for (int i = 0; i < 3; i++) {
-            matcher.find();
+        index = 1;
+        while (container_elements == null) {
+            document = Jsoup.connect(url).timeout(0).get();
+            container_elements = document.getElementsByClass("container");
+            if (index == 10) {
+                break;
+            }
+            index++;
         }
-        int reviews_count = Integer.parseInt(matcher.group());
-        System.out.println(reviews_count);
+        data[HOURS] = container_elements.select(".column.column-beta.sidebar>.bordered-rail>.ysection.biz-hours>.table>tbody").text();       
+        Elements additional_info = container_elements.select(".column.column-beta.sidebar>.bordered-rail>.ysection>ul>li>.short-def-list>dl");
+
+        for (Element element : additional_info) {
+            if ((element.select("dt").text().toLowerCase()).contains("takes reservations")) {
+                data[TAKE_RESERVATION] = element.select("dd").text().toLowerCase().equals("yes");               
+            }
+            if ((element.select("dt").text().toLowerCase()).contains("delivery")) {
+                data[DELIVERY] = element.select("dd").text().toLowerCase().equals("yes");                
+            }
+            if ((element.select("dt").text().toLowerCase()).contains("take-out")) {
+                data[TAKE_OUT] = element.select("dd").text().toLowerCase().equals("yes");                
+            }
+            if ((element.select("dt").text().toLowerCase()).contains("accepts credit cards")) {
+                data[ACCEPT_CREDIT_CARDS] = element.select("dd").text().toLowerCase().equals("yes");                
+            }
+            if ((element.select("dt").text().toLowerCase()).contains("good for")) {
+                data[GOOD_FOR] = element.select("dd").text().toLowerCase();                
+            }
+            if ((element.select("dt").text().toLowerCase()).contains("parking")) {
+                data[PARKING] = element.select("dd").text().toLowerCase();                
+            }
+            if ((element.select("dt").text().toLowerCase()).contains("wheelchair accessible")) {
+                data[WHEELCHAIR_ACCESSIBLE] = element.select("dd").text().toLowerCase().equals("yes");                
+            }
+            if ((element.select("dt").text().toLowerCase()).contains("good for kids")) {
+                data[GOOD_FOR_KIDS] = element.select("dd").text().toLowerCase().equals("yes");               
+            }
+            if ((element.select("dt").text().toLowerCase()).contains("good for groups")) {
+                data[GOOD_FOR_GROUPS] = element.select("dd").text().toLowerCase().equals("yes");               
+            }
+            if ((element.select("dt").text().toLowerCase()).contains("attire")) {
+                data[ATTIRE] = element.select("dd").text().toLowerCase();                
+            }
+            if ((element.select("dt").text().toLowerCase()).contains("ambience")) {
+                data[AMBIENCE] = element.select("dd").text().toLowerCase();               
+            }
+            if ((element.select("dt").text().toLowerCase()).contains("noise level")) {
+                data[NOISE_LEVEL] = element.select("dd").text().toLowerCase();                
+            }
+            if ((element.select("dt").text().toLowerCase()).contains("music")) {
+                data[MUSIC] = element.select("dd").text().toLowerCase();                
+            }
+            if ((element.select("dt").text().toLowerCase()).contains("good for dancing")) {
+                data[GOOD_FOR_DANCING] = element.select("dd").text().toLowerCase().equals("yes");                
+            }
+            if ((element.select("dt").text().toLowerCase()).contains("alcohol")) {
+                data[ALCOHOL] = element.select("dd").text().toLowerCase();               
+            }
+            if ((element.select("dt").text().toLowerCase()).contains("happy hour")) {
+                data[HAPPY_HOUR] = element.select("dd").text().toLowerCase().equals("yes");                
+            }
+            if ((element.select("dt").text().toLowerCase()).contains("best nights")) {
+                data[BEST_NIGHTS] = element.select("dd").text().toLowerCase();                
+            }
+            if ((element.select("dt").text().toLowerCase()).contains("coat check")) {
+                data[COAT_CHECK] = element.select("dd").text().toLowerCase().equals("yes");                
+            }
+            if ((element.select("dt").text().toLowerCase()).contains("smoking")) {
+                data[SMOKING] = element.select("dd").text().toLowerCase();                
+            }
+            if ((element.select("dt").text().toLowerCase()).contains("outdoor seating")) {
+                data[OUTDOOR_SEATS] = element.select("dd").text().toLowerCase().equals("yes");                
+            }
+            if ((element.select("dt").text().toLowerCase()).contains("wi-fi")) {
+                data[WIFI] = element.select("dd").text().toLowerCase().equals("yes");                
+            }
+            if ((element.select("dt").text().toLowerCase()).contains("has tv")) {
+                data[HAS_TV] = element.select("dd").text().toLowerCase().equals("yes");                
+            }
+            if ((element.select("dt").text().toLowerCase()).contains("waiter service")) {
+                data[WAITER_SERVICES] = element.select("dd").text().toLowerCase().equals("yes");                
+            }
+            if ((element.select("dt").text().toLowerCase()).contains("caters")) {
+                data[CATERS] = element.select("dd").text().toLowerCase().equals("yes");
+            }
+        }
+        int reviews_count = Integer.parseInt(data[REVIEW_COUNT].toString());
         int page_count;
         if (reviews_count % 40 == 0) {
             page_count = reviews_count / 40;
         } else {
             page_count = reviews_count / 40 + 1;
         }
-        System.out.println(page_count);
 
         int temp = 0;
 
@@ -146,40 +196,33 @@ public class FetchYelpData {
         ArrayList<String[]> reviewer_details = new ArrayList();
 
         for (int count = 0; count < page_count; count++) {
-            String url1 = desc_url + "&start=" + temp;
-            System.out.println("new url" + url1);
+            String url1 = desc_url+"?start="+temp+"&sort_by=date_desc";
             Elements reviews;
             Document doc1 = Jsoup.connect(url1).timeout(0).get();
-            reviews = doc1.select("#reviews-other>ul>li");
+            reviews = doc1.select(".column-alpha.main-section>div>.feed>.review-list>ul>li");
             temp += 40;
-            while (reviews == null || reviews.size() == 0) {
+            while (reviews == null || reviews.isEmpty()) {
                 doc1 = Jsoup.connect(url1).timeout(0).get();
-                reviews = doc1.select("#reviews-other>ul>li");
+                reviews = doc1.select(".column-alpha.main-section>div>.feed>.review-list>ul>li.review.review-with-no-actions");
             }
-            //System.out.println("reviews" + reviews.size());
-            for (Element review : reviews) {
-
-                Elements rating_element = review.select(".rating>meta");
-
-                //System.out.println(rating_element.get(0).attr("content"));
-                Float rating_star = Float.parseFloat(rating_element.get(0).attr("content").trim());
-
-                rating.add(rating_star);
-                // System.out.println("rating_star=" + rating_star);
-                //String reviewer_name = 
-                reviewer_details.add(new String[]{review.select("meta[itemprop=datePublished]").attr("content").trim(), review.select(".user-name>a").text(), review.select("p.reviewer_info").text(), review.select("p.review_comment[itemprop=description]").text(), rating_star.toString()});
-
-            }
-
-
+                for(Element rating_element:reviews){
+                    
+                    Elements star_rating_element=rating_element.select(".review-wrapper>.review-content>.biz-rating.biz-rating-very-large.clearfix>div>.rating-very-large>meta");
+                    Float rating_star = Float.parseFloat(star_rating_element.attr("content").trim());                  
+                    rating.add(rating_star);
+                    Elements date_rating_element=rating_element.select(".review-content>.biz-rating.biz-rating-very-large.clearfix>.rating-qualifier>meta");
+                    String date_publish=date_rating_element.attr("content").trim();                    
+                    String user_name=rating_element.select(".review-sidebar>.review-sidebar-content>.ypassport.media-block.clearfix>.media-story>ul>.user-name>a").text();
+                    String user_info=rating_element.select(".review-sidebar>.review-sidebar-content>.ypassport.media-block.clearfix>.media-story>ul>.user-location>b").text();                    
+                    String desc_info=rating_element.select(".review-wrapper>.review-content>p").text();
+                    reviewer_details.add(new String []{date_publish,user_name,user_info,desc_info,rating_star.toString()}); 
+               }
         }
-
         Date first_review_date = null;
         float rating_total = 0.0f;
         float mean_30 = 0.0f, mean_60 = 0.0f, mean_90 = 0.0f, mean_120 = 0.0f, mean_150 = 0.0f, mean_180 = 0.0f, mean_210 = 0.0f;
         try {
             first_review_date = new SimpleDateFormat("yyyy-MM-dd").parse(reviewer_details.get(0)[0]);
-            System.out.println("first_review_date" + first_review_date);
         } catch (ParseException ex) {
             Logger.getLogger(FetchYelpData.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -190,55 +233,41 @@ public class FetchYelpData {
                 if (Days.daysBetween(new DateTime(new SimpleDateFormat("yyyy-MM-dd").parse(reviewer_details.get(i)[0])), new DateTime(first_review_date)).getDays() > 30 && mean_30 == 0.0) {
                     mean_30 = rating_total / i;
                     data[MEAN_30] = mean_30;
-                    System.out.println("mean_30=" + mean_30);
-                    System.out.println("i=" + i);
                 }
                 if (Days.daysBetween(new DateTime(new SimpleDateFormat("yyyy-MM-dd").parse(reviewer_details.get(i)[0])), new DateTime(first_review_date)).getDays() > 60 && mean_60 == 0.0) {
                     mean_60 = rating_total / i;
                     data[MEAN_60] = mean_60;
-                    System.out.println("mean_60=" + mean_60);
-                    System.out.println("i=" + i);
                 }
                 if (Days.daysBetween(new DateTime(new SimpleDateFormat("yyyy-MM-dd").parse(reviewer_details.get(i)[0])), new DateTime(first_review_date)).getDays() > 90 && mean_90 == 0.0) {
                     mean_90 = rating_total / i;
                     data[MEAN_90] = mean_90;
-                    System.out.println("mean_90=" + mean_90);
-                    System.out.println("i=" + i);
                 }
                 if (Days.daysBetween(new DateTime(new SimpleDateFormat("yyyy-MM-dd").parse(reviewer_details.get(i)[0])), new DateTime(first_review_date)).getDays() > 120 && mean_120 == 0.0) {
                     mean_120 = rating_total / i;
                     data[MEAN_120] = mean_120;
-                    System.out.println("mean_120=" + mean_120);
-                    System.out.println("i=" + i);
                 }
                 if (Days.daysBetween(new DateTime(new SimpleDateFormat("yyyy-MM-dd").parse(reviewer_details.get(i)[0])), new DateTime(first_review_date)).getDays() > 150 && mean_150 == 0.0) {
                     mean_150 = rating_total / i;
                     data[MEAN_150] = mean_150;
-                    System.out.println("mean_150=" + mean_150);
-                    System.out.println("i=" + i);
                 }
                 if (Days.daysBetween(new DateTime(new SimpleDateFormat("yyyy-MM-dd").parse(reviewer_details.get(i)[0])), new DateTime(first_review_date)).getDays() > 180 && mean_180 == 0.0) {
                     mean_180 = rating_total / i;
                     data[MEAN_180] = mean_180;
-                    System.out.println("mean_180=" + mean_180);
-                    System.out.println("i=" + i);
                 }
                 if (Days.daysBetween(new DateTime(new SimpleDateFormat("yyyy-MM-dd").parse(reviewer_details.get(i)[0])), new DateTime(first_review_date)).getDays() > 210 && mean_210 == 0.0) {
                     mean_210 = rating_total / i;
                     data[MEAN_210] = mean_210;
-                    System.out.println("mean_210=" + mean_210);
-                    System.out.println("i=" + i);
                 }
 
                 rating_total += (float) rating.get(i);
             }
             mean = (rating_total / rating.size());
             int days_diff = Days.daysBetween(new DateTime(new SimpleDateFormat("yyyy-MM-dd").parse(reviewer_details.get(reviewer_details.size() - 1)[0])), new DateTime(first_review_date)).getDays();
-            if ( days_diff > 210) {
+            if (days_diff > 210) {
                 data[MEAN_210_PLUS] = mean;
             }
-            
-            switch(days_diff){
+
+            switch (days_diff) {
                 case 30:
                     data[MEAN_30] = mean;
                     break;
@@ -264,10 +293,6 @@ public class FetchYelpData {
         } catch (ParseException ex) {
             Logger.getLogger(FetchYelpData.class.getName()).log(Level.SEVERE, null, ex);
         }
-
-
-
-
         float deviation_total = 0.0f;
         for (int i = 0; i < rating.size(); i++) {
 
@@ -275,7 +300,7 @@ public class FetchYelpData {
             deviation_total += Math.pow(deviation, 2);
 
         }
-        float variance = (float)Math.sqrt(deviation_total / rating.size());
+        float variance = (float) Math.sqrt(deviation_total / rating.size());
 
         Collections.sort(rating);
         float median = 0.0f;
@@ -286,9 +311,6 @@ public class FetchYelpData {
             int middle = rating.size() / 2;
             median = rating.get(middle - 1);
         }
-        System.out.println("mean=" + mean);
-        System.out.println("variance=" + variance);
-        System.out.println("The median is= " + median);
         data[MEAN] = mean;
         data[MEDIAN] = median;
         data[VARIANCE] = variance;
@@ -300,7 +322,6 @@ public class FetchYelpData {
         }
         int days_between = Days.daysBetween(new DateTime(date), new DateTime(new Date())).getDays();
         data[DAYS_BETWEEN] = days_between;
-        System.out.println("data= " + data);
         HashMap<Object[], ArrayList<String[]>> all_data = new HashMap<Object[], ArrayList<String[]>>();
         all_data.put(data, reviewer_details);
         return all_data;
@@ -308,6 +329,7 @@ public class FetchYelpData {
 
     public static void main(String[] args) throws IOException {
         FetchYelpData fetchdata = new FetchYelpData();
+        //fetchdata.yelpdatafetch("http://www.yelp.com/biz/san-pedro-brewing-company-san-pedro");
         fetchdata.yelpdatafetch("http://www.yelp.com/biz/tribu-grill-union-city");
 
     }
